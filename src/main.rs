@@ -2,20 +2,22 @@ use rand::prelude::*;
 use core::array::from_fn;
 use std::char;
 
-#[derive(Clone)]
+
 enum Configuration{
     RL,
     LL,
     TT,
+    RS,
+    LS,
     SL,
     SS,
     BB
 }
-#[derive(Clone)]
+
 struct Piece{
     p_type    :  Configuration,
     config    :  [[bool;4];4],
-    rotation  :  i32
+    rotation  :  usize
 }
 // [
 //        [false,false,false,false],
@@ -32,7 +34,7 @@ impl Piece {
 
 
 
-    const RL:[[[bool;4];4];4] = [[
+    const LL:[[[bool;4];4];4] = [[
         [false,false,false,false],
         [true ,false,false,false],
         [true ,false,false,false],
@@ -57,7 +59,7 @@ impl Piece {
 
 
 
-    const LL:[[[bool;4];4];4] = [[
+    const RL:[[[bool;4];4];4] = [[
         [false,false,false,false],
         [false,true ,false,false],
         [false,true ,false,false],
@@ -107,6 +109,36 @@ impl Piece {
 
 
 
+    const LS:[[[bool;4];4];2]= [[
+        [false,false,false,false],
+        [true ,false,false,false],
+        [true ,true ,false,false],
+        [false,true ,false,false]
+    ],[
+        [false,false,false,false],
+        [false,false,false,false],
+        [false,true ,true ,false],
+        [true ,true ,false,false]
+    ]];
+
+
+
+
+    const RS:[[[bool;4];4];2]= [[
+        [false,false,false,false],
+        [false,true ,false,false],
+        [true ,true ,false,false],
+        [true ,false,false,false]
+    ],[
+        [false,false,false,false],
+        [false,false,false,false],
+        [true ,true ,false,false],
+        [false,true ,true ,false]
+    ]];
+
+
+
+
     const SL:[[[bool;4];4];2] = [[
         [true ,false,false,false],
         [true ,false,false,false],
@@ -127,43 +159,167 @@ impl Piece {
         [false,false,false,false],
         [true ,true ,false,false],
         [true ,true ,false,false]
-        ]];
-    }
-struct GameScreen{
-    game_board      :  [[bool; 10]; 20],
-    rendered_board  :  [[char;24];22],
-    pieces          :  [Piece;51] // 10 * 20 tiles, 4 tiles per block max, 1 redundant
+    ]];
+
+
+
+    fn get_configuration(config:Configuration, rotation:usize) -> [[bool;4];4]
+    {
+        assert!(rotation < 4, "Function: Get Configuration. Piece Rotation Parsing");
+        match config{
+            Configuration::RL => {
+                Piece::RL[rotation]
+            },
+            Configuration::LL => {
+                Piece::LL[rotation]
+            },
+            Configuration::TT => {
+                Piece::TT[rotation]
+            },
+            Configuration::RS => {
+                match rotation{
+                    0|2 => {
+                        Piece::RS[0]
+                    },
+                    1|3 => {
+                        Piece::RS[1]
+                    }
+                    _ => {
+                        panic!("Function: Get Configuration. Piece Rotation Parsing [RS]")
+                    }
+                }
+            },
+            Configuration::LS => {
+                match rotation{
+                    0|2 => {
+                        Piece::RS[0]
+                    },
+                    1|3 => {
+                        Piece::RS[1]
+                    }
+                    _ => {
+                        panic!("Function: Get Configuration. Piece Rotation Parsing [RS]")
+                    }
+                }
+            },
+            Configuration::SL => {
+                match rotation{
+                    0|2 => {
+                        Piece::SL[0]
+                    },
+                    1|3 => {
+                        Piece::SL[1]
+                    }
+                    _ => {
+                        panic!("Function: Get Configuration. Piece Rotation Parsing [SL]")
+                    }
+                }
+            },
+            Configuration::SS => {
+                match rotation{
+                    0|1|2|3 => {
+                        Piece::SS[0]
+                    }
+                    _ => {
+                        panic!("Function: Get Configuration. Piece Rotation Parsing [SS]")
+                    }
+                }
+            },
+            Configuration::BB => {
+                Piece::BB
+            }
+        }
+    }   
 }
+
+ 
+struct GameScreen{
+    game_board      :  [[bool; GameScreen::logic_width]; GameScreen::logic_height],
+    rendered_board  :  [[char; GameScreen::screen_width];GameScreen::screen_height],
+    pieces          :  [Piece; GameScreen::piece_limit] // GameScreen::logic_width * 20 tiles, 4 tiles per block max, 1 redundant
+}
+
 impl GameScreen {
+
+    //Screen Size
+    const screen_width  :  usize  =  24;
+    const screen_height :  usize  =  22;
+
+
+    //State Machine Size
+    const logic_width   :  usize  = (GameScreen::screen_width  -4) /2;
+    const logic_height  :  usize  = (GameScreen::screen_height -2);
+    const piece_limit   :  usize  = (GameScreen::logic_width * GameScreen::logic_height) /4 +1; 
+    
+
+    //Rendering configuration
+    const B0L: char = '<'; // GameScreen::B0L
+    const B1M: char = '|'; // GameScreen::B1M
+    const B3R: char = '>'; // GameScreen::B3R
+ 
+    const BC0: char = '.'; // GameScreen::BC0
+    const BC1: char = ' '; // GameScreen::BC1
+
+    const BB0: char = '='; // GameScreen::BB0
+    const BB1: char = '\\';// GameScreen::BB1
+    const BB2: char = '/'; // GameScreen::BB2
+    const BB3: char = ' '; // GameScreen::BB3
+
+
+//let first_design: [[char; 24]; 22] = [
+//     ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
+//     ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
+//     ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
+//     ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
+//     ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
+//     ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
+//     ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
+//     ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
+//     ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
+//     ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
+//     ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
+//     ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
+//     ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
+//     ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
+//     ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
+//     ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
+//     ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
+//     ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
+//     ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
+//     ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
+//     ['<','!','=','=','=','=','=','=','=','=','=','=','=','=','=','=','=','=','=','=','=','=','!','>'],
+// [' ',' ','\\','/','\\','/','\\','/','\\','/','\\','/','\\','/','\\','/','\\','/','\\','/','\\','/',' ',' ']
+//         ];
+
     pub fn new() -> Self{
     //[' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' '],
-        let init_layers: [[char; 24]; 22] = [
-    ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
-    ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
-    ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
-    ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
-    ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
-    ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
-    ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
-    ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
-    ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
-    ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
-    ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
-    ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
-    ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
-    ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
-    ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
-    ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
-    ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
-    ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
-    ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
-    ['<','!','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','.',' ','!','>'],
-    ['<','!','=','=','=','=','=','=','=','=','=','=','=','=','=','=','=','=','=','=','=','=','!','>'],
-[' ',' ','\\','/','\\','/','\\','/','\\','/','\\','/','\\','/','\\','/','\\','/','\\','/','\\','/',' ',' ']
+        let configured_layers: [[char; GameScreen::screen_width]; GameScreen::screen_height] = [
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::BC0,GameScreen::BC1,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::B0L,GameScreen::B1M,GameScreen::BB0,GameScreen::BB0,GameScreen::BB0,GameScreen::BB0,GameScreen::BB0,GameScreen::BB0,GameScreen::BB0,GameScreen::BB0,GameScreen::BB0,GameScreen::BB0,GameScreen::BB0,GameScreen::BB0,GameScreen::BB0,GameScreen::BB0,GameScreen::BB0,GameScreen::BB0,GameScreen::BB0,GameScreen::BB0,GameScreen::BB0,GameScreen::BB0,GameScreen::B1M,GameScreen::B3R],
+    [GameScreen::BB3,GameScreen::BB3,GameScreen::BB1,GameScreen::BB2,GameScreen::BB1,GameScreen::BB2,GameScreen::BB1,GameScreen::BB2,GameScreen::BB1,GameScreen::BB2,GameScreen::BB1,GameScreen::BB2,GameScreen::BB1,GameScreen::BB2,GameScreen::BB1,GameScreen::BB2,GameScreen::BB1,GameScreen::BB2,GameScreen::BB1,GameScreen::BB2,GameScreen::BB1,GameScreen::BB2,GameScreen::BB3,GameScreen::BB3]
         ];
         GameScreen{
-            game_board: [[false;10];20],
-            rendered_board  : init_layers,
+            game_board: [[false;GameScreen::logic_width];GameScreen::logic_height],
+            rendered_board  : configured_layers,
             pieces          : from_fn(|_| Piece{
                 p_type: Configuration::BB,
                 config: Piece::BB,
@@ -194,16 +350,18 @@ impl GameScreen {
             }
         }
     }
-
     fn display_board(&self)
     {
         
         for layer in self.rendered_board{
             for chars in layer{
+                #[cfg(feature = "std")]
                 print!("{}",chars);
             }
+            #[cfg(feature = "std")]
             print!("\n");
         }
+        #[cfg(feature = "std")]
         print!("\n");
     }
     fn update_render(&mut self)
@@ -212,7 +370,7 @@ impl GameScreen {
         assert!(self.rendered_board.len()-2 == self.game_board.len()      , "{}", format!("Update renderer: Height mismatch\n[{}][{}]",self.rendered_board.len(), self.game_board.len()));
 
 
-        self.game_board = [[true; 10]; 20]; //##############################
+        self.game_board = [[true; GameScreen::logic_width]; GameScreen::logic_height]; //##############################
 
 
         for (ii, layer) in self.game_board.iter().enumerate(){
