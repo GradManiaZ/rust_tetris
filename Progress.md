@@ -47,13 +47,14 @@ But say you want to change the design...
 It may not be the prettiest... But it sure saves doing it manually :')
 
 ```Rust
+
 //Screen Size
-const screen_width  :  usize  =  24;
-const screen_height :  usize  =  22;
+const screen_width  :  usize  =  24; // Optimised for tiles 10 wide!
+const screen_height :  usize  =  22; // Arbitrary
 
 
 //State Machine Size
-const logic_width   :  usize  = (GameScreen::screen_width  -4) /2;
+const logic_width   :  usize  = (GameScreen::screen_width  -4) /2; 
 const logic_height  :  usize  = (GameScreen::screen_height -2);
 const piece_limit   :  usize  = (GameScreen::logic_width * GameScreen::logic_height) /4 +1; 
 
